@@ -31,6 +31,15 @@ h1{ text-align:center; font-size:24px; margin:6px 0 2px; letter-spacing:.04em; }
   padding:16px; text-align:center; box-shadow:0 16px 40px -20px rgba(0,0,0,0.3);
 }
 #startScreen img{ width:100%; border-radius:16px; box-shadow:0 8px 20px -10px rgba(0,0,0,0.4); display:block; }
+.cover-wrap{ position:relative; }
+.start-overlay-btn{
+  position:absolute; left:50%; bottom:14px; transform:translateX(-50%);
+  border:none; border-radius:18px; padding:14px 32px;
+  background:linear-gradient(180deg,var(--red),#B8332B); color:#fff;
+  font-size:18px; font-weight:800; cursor:pointer;
+  box-shadow:0 6px 0 rgba(0,0,0,0.15), 0 8px 20px -6px rgba(0,0,0,0.5);
+}
+.start-overlay-btn:active{ transform:translateX(-50%) translateY(4px); box-shadow:0 2px 0 rgba(0,0,0,0.15); }
 #startScreen p{ font-size:13px; line-height:1.8; color:#6b5b50; text-align:left; }
 #startScreen button{
   margin-top:10px; border:none; border-radius:18px; padding:14px 32px;
@@ -102,9 +111,9 @@ h1{ text-align:center; font-size:24px; margin:6px 0 2px; letter-spacing:.04em; }
   position:fixed; z-index:120; border-radius:9px; object-fit:cover;
   box-shadow:0 10px 24px -8px rgba(0,0,0,0.55);
   transform:rotate(-4deg);
-  transition:left .75s cubic-bezier(.3,.7,.2,1), top .75s cubic-bezier(.3,.7,.2,1),
-             width .75s cubic-bezier(.3,.7,.2,1), height .75s cubic-bezier(.3,.7,.2,1),
-             transform .75s cubic-bezier(.3,.7,.2,1), opacity .3s ease;
+  transition:left .46s cubic-bezier(.3,.7,.2,1), top .46s cubic-bezier(.3,.7,.2,1),
+             width .46s cubic-bezier(.3,.7,.2,1), height .46s cubic-bezier(.3,.7,.2,1),
+             transform .46s cubic-bezier(.3,.7,.2,1), opacity .3s ease;
   pointer-events:none;
 }
 .skip-badge{
@@ -245,6 +254,13 @@ h1{ text-align:center; font-size:24px; margin:6px 0 2px; letter-spacing:.04em; }
   cursor:pointer; box-shadow:0 3px 0 rgba(0,0,0,0.08); margin:0 4px;
 }
 .restart-btn:active{ transform:translateY(2px); box-shadow:none; }
+#bgmBtn{
+  position:fixed; top:10px; right:10px; z-index:40;
+  width:40px; height:40px; border-radius:50%; border:none;
+  background:#fff; box-shadow:0 4px 10px -4px rgba(0,0,0,0.35);
+  font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+}
+#bgmBtn:active{ transform:scale(0.92); }
 
 /* 幅の狭いスマホ向けにさらに縮小 */
 @media (max-width:360px){
@@ -262,17 +278,25 @@ h1{ text-align:center; font-size:24px; margin:6px 0 2px; letter-spacing:.04em; }
 </head>
 <body>
 
+<!-- BGM: SUNOで作った曲のファイル名/URLをsrcに入れる -->
+<audio id="bgmAudio" loop preload="auto">
+  <source src="bgm.mp3" type="audio/mpeg">
+</audio>
+<button id="bgmBtn" onclick="toggleBGM()">🔊</button>
+
 <div class="wrap">
 
 <div id="startScreen">
-  <img id="coverImg" src="" alt="HIRAGANA BATTLE">
+  <div class="cover-wrap">
+    <img id="coverImg" src="" alt="HIRAGANA BATTLE">
+    <button class="start-overlay-btn" onclick="startGame()">はじめる</button>
+  </div>
   <p>
   4人対戦(あなた＋どうぶつ3人)のひらがなカードゲームです。<br><br>
   ・前の人のカードと同じ「行(あいうえお)」「段(あかさたな)」を出そう<br>
   ・出せない時は山札から1枚<br>
   ・手札が0枚になったら勝ち!
   </p>
-  <button onclick="startGame()">はじめる</button>
 </div>
 
 <div id="game">
@@ -343,7 +367,7 @@ h1{ text-align:center; font-size:24px; margin:6px 0 2px; letter-spacing:.04em; }
   <div class="modal">
     <h3>本当に最初から始めますか?</h3>
     <div class="btn-row">
-      <button class="btn-primary" onclick="location.reload()">はい</button>
+      <button class="btn-primary" onclick="doRestart()">はい</button>
       <button class="btn-secondary" onclick="document.getElementById('restartModal').classList.remove('show')">いいえ</button>
     </div>
   </div>
@@ -351,12 +375,12 @@ h1{ text-align:center; font-size:24px; margin:6px 0 2px; letter-spacing:.04em; }
 
 <div class="modal-back" id="ruleModal">
   <div class="modal" style="max-width:340px; max-height:82vh; overflow-y:auto; position:relative; padding-top:36px;">
-    <button onclick="document.getElementById('ruleModal').classList.remove('show')" style="position:absolute; top:10px; right:10px; width:28px; height:28px; border:none; border-radius:50%; background:#f3ece3; color:var(--ink); font-size:16px; font-weight:800; cursor:pointer; line-height:1;">✕</button>
+    <button onclick="document.getElementById('ruleModal').classList.remove('show')" style="position:absolute; top:10px; right:10px; width:28px; height:28px; padding:0; margin:0; border:none; border-radius:50%; background:#f3ece3; color:var(--ink); font-size:16px; font-weight:800; cursor:pointer; line-height:1; display:flex; align-items:center; justify-content:center;">✕</button>
     <h3>あそびかた</h3>
     <div id="ruleCardList" style="text-align:left;"></div>
     <p style="font-size:12.5px; line-height:1.7; color:#6b5b50; text-align:left; background:#f7f0e6; border-radius:10px; padding:8px 10px; margin-top:8px;">
     <b>💡 かさね技のルール</b><br>
-    「+1」を出されても、自分がもっと大きいペンキカード(+2・+3・+5)を持っていれば、それを出して攻撃を跳ね返せる!<br>
+    「+1」を出されても、自分がもっと大きいペンキカード(+2・+3)を持っていれば、それを出して攻撃を防御できる!<br>
     そうすると引く枚数が次の人にそのまま回っていくよ。
     </p>
     <div class="btn-row" style="margin-bottom:4px;">
@@ -421,7 +445,7 @@ const ACTIONS = [
   {key:'plus2', n:2},
   {key:'plus3', n:3},
 ];
-const WILDS = [ {key:'plus5', n:5}, {key:'colorChange', n:0}, {key:'swap', n:0} ];
+const WILDS = [ {key:'colorChange', n:0}, {key:'swap', n:0} ];
 
 let state = null;
 let uid = 0;
@@ -473,8 +497,8 @@ function renderRuleCards(){
   const list = document.getElementById('ruleCardList');
   if(list.dataset.rendered) return;
   const items = [
-    {card:{type:'letter', char:'あ'}, text:'ひらがなカード:場のカードと同じ「色(段)」か、同じ「行」(あいうえお…など)なら出せる'},
-    {card:{type:'action', color:'green', action:'plus1'}, text:'+1、+2、+3、+5:次の人がその枚数を引く'},
+    {card:{type:'letter', char:'あ'}, text:'ひらがなカード:場のカードと同じ「色(段)」か、同じ「行」(あいうえお…など)を出せる'},
+    {card:{type:'action', color:'green', action:'plus1'}, text:'+1、+2、+3:次の人がその枚数を引く'},
     {card:{type:'wild', wildType:'defense'}, text:'カードを引きたくない場合、防御できる'},
     {card:{type:'action', color:'purple', action:'reverse'}, text:'逆まわり'},
     {card:{type:'action', color:'red', action:'skip'}, text:'次の人が1回休み'},
@@ -508,6 +532,7 @@ function doRestart(){
 function startGame(){
   document.getElementById('startScreen').style.display='none';
   document.getElementById('game').style.display='block';
+  startBGM();
 
   const players = [
     {id:0, name:'あなた', isHuman:true, avatar:'🧑', hand:[]},
@@ -524,6 +549,21 @@ function startGame(){
   renderAll();
   log(`スタート! 最初のカードは「${starter.char}」`);
   continueGame();
+}
+
+// BGM制御(効果音のWeb Audio APIとは別系統なので、同時に鳴っても打ち消し合わない)
+let bgmMuted = false;
+function startBGM(){
+  const bgm = document.getElementById('bgmAudio');
+  bgm.volume = 0.35; // 効果音を邪魔しない音量に調整。曲に合わせて0〜1で調整可
+  if(!bgmMuted){ bgm.play().catch(()=>{ /* 自動再生ブロック時は次のユーザー操作で再試行される */ }); }
+}
+function toggleBGM(){
+  const bgm = document.getElementById('bgmAudio');
+  const btn = document.getElementById('bgmBtn');
+  bgmMuted = !bgmMuted;
+  if(bgmMuted){ bgm.pause(); btn.textContent = '🔇'; }
+  else { bgm.play().catch(()=>{}); btn.textContent = '🔊'; }
 }
 
 let audioCtx;
@@ -596,7 +636,7 @@ function canPlay(card){
   if(state.pendingDraw > 0){
     if(card.type==='wild' && card.wildType==='defense') return true;
     const n = cardPlusN(card);
-    return n >= state.pendingPlusN;
+    return n > state.pendingPlusN;
   }
   // 通常時は防御カードは出せない(攻撃を受けた時にしか使えない)
   if(card.type==='wild' && card.wildType==='defense') return false;
@@ -761,7 +801,7 @@ function flyCardToCenter(sourceEl, card, onDone){
     const colors = card.color ? [COLOR_HEX[card.color]] : Object.values(COLOR_HEX);
     spawnPaintSplat(toRect.left+toRect.width/2, toRect.top+toRect.height/2, colors);
     onDone();
-  }, 780);
+  }, 480);
 }
 
 function nextIndex(from, steps){
@@ -1151,7 +1191,7 @@ function continueGame(){
     } else { beginHumanTurn(); }
     return;
   }
-  setTimeout(()=> aiTurn(state.turn), 1300);
+  setTimeout(()=> aiTurn(state.turn), 800);
 }
 
 function aiChooseCard(p){
