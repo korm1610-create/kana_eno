@@ -102,9 +102,9 @@ h1{ text-align:center; font-size:24px; margin:6px 0 2px; letter-spacing:.04em; }
   position:fixed; z-index:120; border-radius:9px; object-fit:cover;
   box-shadow:0 10px 24px -8px rgba(0,0,0,0.55);
   transform:rotate(-4deg);
-  transition:left .46s cubic-bezier(.3,.7,.2,1), top .46s cubic-bezier(.3,.7,.2,1),
-             width .46s cubic-bezier(.3,.7,.2,1), height .46s cubic-bezier(.3,.7,.2,1),
-             transform .46s cubic-bezier(.3,.7,.2,1), opacity .3s ease;
+  transition:left .75s cubic-bezier(.3,.7,.2,1), top .75s cubic-bezier(.3,.7,.2,1),
+             width .75s cubic-bezier(.3,.7,.2,1), height .75s cubic-bezier(.3,.7,.2,1),
+             transform .75s cubic-bezier(.3,.7,.2,1), opacity .3s ease;
   pointer-events:none;
 }
 .skip-badge{
@@ -343,7 +343,7 @@ h1{ text-align:center; font-size:24px; margin:6px 0 2px; letter-spacing:.04em; }
   <div class="modal">
     <h3>本当に最初から始めますか?</h3>
     <div class="btn-row">
-      <button class="btn-primary" onclick="doRestart()">はい</button>
+      <button class="btn-primary" onclick="location.reload()">はい</button>
       <button class="btn-secondary" onclick="document.getElementById('restartModal').classList.remove('show')">いいえ</button>
     </div>
   </div>
@@ -761,7 +761,7 @@ function flyCardToCenter(sourceEl, card, onDone){
     const colors = card.color ? [COLOR_HEX[card.color]] : Object.values(COLOR_HEX);
     spawnPaintSplat(toRect.left+toRect.width/2, toRect.top+toRect.height/2, colors);
     onDone();
-  }, 480);
+  }, 780);
 }
 
 function nextIndex(from, steps){
@@ -1151,7 +1151,7 @@ function continueGame(){
     } else { beginHumanTurn(); }
     return;
   }
-  setTimeout(()=> aiTurn(state.turn), 800);
+  setTimeout(()=> aiTurn(state.turn), 1300);
 }
 
 function aiChooseCard(p){
