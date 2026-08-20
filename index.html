@@ -30,10 +30,13 @@ h1{ text-align:center; font-size:24px; margin:6px 0 2px; letter-spacing:.04em; }
   max-width:420px; margin:20px auto; background:#fff; border-radius:24px;
   padding:16px; text-align:center; box-shadow:0 16px 40px -20px rgba(0,0,0,0.3);
 }
-#startScreen img{ width:100%; border-radius:16px; box-shadow:0 8px 20px -10px rgba(0,0,0,0.4); display:block; }
+#startScreen img{ width:100%; aspect-ratio:1054/1492; border-radius:16px; box-shadow:0 8px 20px -10px rgba(0,0,0,0.4); display:block; background:#f5efe6; }
 .cover-wrap{ position:relative; }
+.start-btn-zone{
+  position:absolute; left:0; right:0; top:54.7%; transform:translateY(-50%);
+  display:flex; justify-content:center; align-items:center;
+}
 .start-overlay-btn{
-  position:absolute; left:50%; top:56%; transform:translate(-50%,-50%);
   border:none; border-radius:18px; padding:14px 32px;
   background:linear-gradient(180deg,var(--red),#B8332B); color:#fff;
   font-size:18px; font-weight:800; cursor:pointer;
@@ -297,7 +300,9 @@ h1{ text-align:center; font-size:24px; margin:6px 0 2px; letter-spacing:.04em; }
 <div id="startScreen">
   <div class="cover-wrap">
     <img id="coverImg" src="" alt="HIRAGANA BATTLE">
-    <button class="start-overlay-btn" onclick="startGame()"><span>はじめる</span></button>
+    <div class="start-btn-zone">
+      <button class="start-overlay-btn" onclick="startGame()"><span>はじめる</span></button>
+    </div>
   </div>
   <p>
   4人対戦(あなた＋どうぶつ3人)のひらがなカードゲームです。<br><br>
