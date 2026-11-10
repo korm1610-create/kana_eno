@@ -248,6 +248,8 @@ h1{ text-align:center; font-size:24px; margin:6px 0 2px; letter-spacing:.04em; }
 
 #saigoWrap{ position:fixed; left:50%; bottom:150px; transform:translateX(-50%); z-index:60; display:none; }
 #saigoBtn{ background:linear-gradient(180deg,#FF8FA3,#FF6B85); color:#fff; border:none; border-radius:20px; padding:14px 28px; font-size:18px; font-weight:900; box-shadow:0 6px 0 rgba(0,0,0,0.15); cursor:pointer; }
+#replayWrap{ position:fixed; left:14px; bottom:150px; z-index:60; display:none; }
+#replayBtn{ background:linear-gradient(180deg,#FF8FA3,#FF6B85); color:#fff; border:none; border-radius:20px; padding:12px 18px; font-size:15px; font-weight:900; box-shadow:0 6px 0 rgba(0,0,0,0.15); cursor:pointer; display:flex; align-items:center; gap:6px; -webkit-tap-highlight-color:transparent; }
 #fastForwardWrap{ position:fixed; right:14px; bottom:150px; z-index:60; display:none; }
 #fastForwardBtn{ background:linear-gradient(180deg,#5CC8FF,#2E9EE0); color:#fff; border:none; border-radius:20px; padding:12px 20px; font-size:15px; font-weight:900; box-shadow:0 6px 0 rgba(0,0,0,0.15); cursor:pointer; display:flex; align-items:center; gap:6px; }
 #fastForwardBtn.active{ background:linear-gradient(180deg,#FFC94D,#FFA726); }
@@ -310,7 +312,7 @@ h1{ text-align:center; font-size:24px; margin:6px 0 2px; letter-spacing:.04em; }
   <p>
   4人対戦(あなた＋どうぶつ3人)のひらがなカードゲームです。<br><br>
   ・前の人のカードと同じ「行(あいうえお)」「段(あかさたな)」を出そう<br>
-  ・出せない時は山札から1枚<br>
+  ・出せない時は山札から1枚(引いたカードが出せるなら、そのまま出せる!)<br>
   ・手札が0枚になったら勝ち!
   </p>
 </div>
@@ -400,6 +402,10 @@ h1{ text-align:center; font-size:24px; margin:6px 0 2px; letter-spacing:.04em; }
     そうすると引く枚数が次の人にそのまま回っていくよ。
     </p>
     <p style="font-size:12.5px; line-height:1.7; color:#6b5b50; text-align:left; background:#f7f0e6; border-radius:10px; padding:8px 10px; margin-top:8px;">
+    <b>💡 山札から引いた時のルール</b><br>
+    出せるカードがなくて山札から1枚引いた時、そのカードが出せるなら、そのまま続けて出せるよ。出せなければ次の人の番になるよ。
+    </p>
+    <p style="font-size:12.5px; line-height:1.7; color:#6b5b50; text-align:left; background:#f7f0e6; border-radius:10px; padding:8px 10px; margin-top:8px;">
     <b>💡 「さいご!」のルール</b><br>
     手札が残り1枚になったら「さいご!」ボタンを押そう。<br>
     押し忘れると、山札から2枚引くことになるよ。
@@ -413,6 +419,10 @@ h1{ text-align:center; font-size:24px; margin:6px 0 2px; letter-spacing:.04em; }
 <div id="saigoWrap">
   <button id="saigoBtn" onclick="callSaigo()">さいご!</button>
   <div id="saigoBar"><div id="saigoBarInner"></div></div>
+</div>
+
+<div id="replayWrap">
+  <button id="replayBtn" onclick="replayGame()">🔁 <span>もう一度スタート</span></button>
 </div>
 
 <div id="fastForwardWrap">
@@ -465,9 +475,10 @@ const CHAR_ROW = {};
 })();
 // 各色に1枚ずつ入るカード
 const ACTIONS = [
-  {key:'skip', n:0},
   {key:'reverse', n:0},
 ];
+// おやすみカードは1枚減らして4枚(紫には入れない)
+const SKIP_COLORS = ['green','blue','red','yellow'];
 // 攻撃カード(ペンキ)は枚数を絞る:ゲームの終わりが見えるように +1×5, +2×2, +3×1 の計8枚
 const ATTACK_CARDS = [
   {key:'plus1', n:1, colors:['green','blue','red','purple','yellow']},
@@ -477,6 +488,8 @@ const ATTACK_CARDS = [
 const WILDS = [ {key:'colorChange', n:0}, {key:'swap', n:0} ];
 
 let state = null;
+let gameGen = 0; // ゲームを切り替えるたびに増やす(前のゲームのタイマーを無効にするため)
+function gTimeout(fn, ms){ const g = gameGen; return setTimeout(()=>{ if(g===gameGen) fn(); }, ms); }
 let fastForward = false;
 function speedMs(ms){ return fastForward ? Math.max(20, Math.round(ms*0.12)) : ms; }
 function toggleFastForward(){
@@ -491,6 +504,12 @@ function updateFastForwardVisibility(){
   if(!wrap) return;
   const humanFinished = state && state.finished && state.finished.includes(0) && !state.over;
   wrap.style.display = humanFinished ? 'block' : 'none';
+  // 1位であがったら「もう一度スタート」も出す
+  const replay = document.getElementById('replayWrap');
+  if(replay){
+    const humanFirst = state && state.finishOrder && state.finishOrder[0]===0 && !state.over;
+    replay.style.display = humanFirst ? 'block' : 'none';
+  }
 }
 let uid = 0;
 function nid(){ return 'c'+(uid++); }
@@ -515,6 +534,7 @@ function buildDeck(){
     LETTERS[color].forEach(ch=>{ deck.push({id:nid(), type:'letter', color, char:ch}); });
     ACTIONS.forEach(a=>{ deck.push({id:nid(), type:'action', color, action:a.key, n:a.n}); });
   });
+  SKIP_COLORS.forEach(color=>{ deck.push({id:nid(), type:'action', color, action:'skip', n:0}); });
   ATTACK_CARDS.forEach(a=>{
     a.colors.forEach(color=>{ deck.push({id:nid(), type:'action', color, action:a.key, n:a.n}); });
   });
@@ -550,7 +570,7 @@ function renderRuleCards(){
     {card:{type:'action', color:'purple', action:'reverse'}, text:'逆まわり'},
     {card:{type:'action', color:'red', action:'skip'}, text:'次の人が1回休み'},
     {card:{type:'wild', wildType:'colorChange'}, text:'色変え'},
-    {card:{type:'wild', wildType:'swap'}, text:'交換したいプレイヤーと手札を全部交換'},
+    {card:{type:'wild', wildType:'swap'}, text:'交換したいプレイヤーと手札を全部交換(最後の1枚で出したら、交換せずにそのままあがり!)'},
   ];
   items.forEach(it=>{
     const row = document.createElement('div');
@@ -566,22 +586,36 @@ function openRuleModal(){
   document.getElementById('ruleModal').classList.add('show');
 }
 
-function doRestart(){
+// ゲームを切り替える前の後始末(タイマー・演出・ボタンのリセット)
+function resetForNewGame(){
+  gameGen++;
   document.getElementById('restartModal').classList.remove('show');
   if(handRevealTimer){ clearTimeout(handRevealTimer); handRevealTimer = null; }
   if(state && state.saigoTimeout){ clearTimeout(state.saigoTimeout); }
   animating = false;
   document.getElementById('winOverlay').classList.remove('show');
   document.getElementById('saigoWrap').style.display = 'none';
+  document.querySelectorAll('.flying-card').forEach(e=>e.remove());
   fastForward = false;
   const ffBtn = document.getElementById('fastForwardBtn');
   const ffLabel = document.getElementById('fastForwardLabel');
   if(ffBtn) ffBtn.classList.remove('active');
   if(ffLabel) ffLabel.textContent = '早送り';
   document.getElementById('fastForwardWrap').style.display = 'none';
+  document.getElementById('replayWrap').style.display = 'none';
+}
+
+function doRestart(){
+  resetForNewGame();
   state = null;
   document.getElementById('game').style.display = 'none';
   document.getElementById('startScreen').style.display = 'block';
+}
+
+// 1位であがった後の「もう一度スタート」:タイトルに戻らず、すぐ新しいゲームを始める
+function replayGame(){
+  resetForNewGame();
+  startGame();
 }
 
 function startGame(){
@@ -851,8 +885,10 @@ function flyCardToCenter(sourceEl, card, onDone){
     });
   });
 
+  const gFly = gameGen;
   setTimeout(()=>{
     flyer.remove();
+    if(gFly!==gameGen) return;
     const colors = card.color ? [COLOR_HEX[card.color]] : Object.values(COLOR_HEX);
     spawnPaintSplat(toRect.left+toRect.width/2, toRect.top+toRect.height/2, colors);
     onDone();
@@ -887,8 +923,10 @@ function animateDrawThenRun(playerIdx, count, onDone){
   const destY = toRect.top + toRect.height/2 - (fromRect.height*0.7)/2;
 
   let remaining = count;
+  const gDraw = gameGen;
   for(let k=0;k<count;k++){
     setTimeout(()=>{
+      if(gDraw!==gameGen) return;
       const flyer = document.createElement('img');
       flyer.src = IMG.back;
       flyer.className = 'flying-card';
@@ -909,6 +947,7 @@ function animateDrawThenRun(playerIdx, count, onDone){
       });
       setTimeout(()=>{
         flyer.remove();
+        if(gDraw!==gameGen) return;
         remaining--;
         if(remaining===0){
           drawCards(playerIdx, count);
@@ -1023,10 +1062,17 @@ function applyEffectAndAdvance(playerIdx, card, chosenColor, chosenTarget, onCom
         state.pendingPlusN = card.n;
         steps=1; finish();
       } else if(card.wildType==='swap'){
-        sfxReverse();
-        const other = state.players[chosenTarget]; const me = state.players[playerIdx];
-        const tmp = me.hand; me.hand = other.hand; other.hand = tmp;
-        log(`${state.players[playerIdx].name}と${other.name}が手札を交換した`); steps=1; finish();
+        const me = state.players[playerIdx];
+        if(me.hand.length===0 || chosenTarget===undefined || chosenTarget===null){
+          // 最後の1枚で出した交換カード:誰とも交換せず、そのままあがり
+          sfxSparkle();
+          log(`${me.name}は最後の1枚の交換カードで、そのままあがり`); steps=1; finish();
+        } else {
+          sfxReverse();
+          const other = state.players[chosenTarget];
+          const tmp = me.hand; me.hand = other.hand; other.hand = tmp;
+          log(`${me.name}と${other.name}が手札を交換した`); steps=1; finish();
+        }
       } else { steps=1; finish(); }
     }
   } else { state.currentColor = card.color; steps=1; finish(); }
@@ -1100,6 +1146,13 @@ let pendingSwapTarget = null;
 let pendingWildEl = null;
 let animating = false;
 
+// 山札から1枚引いた直後、そのカードがそのまま出せるなら手番を続ける
+function drawnCardPlayable(idx){
+  const hand = state.players[idx].hand;
+  const drawn = hand[hand.length-1];
+  return !!drawn && state.pendingDraw===0 && canPlay(drawn);
+}
+
 function humanDraw(){
   if(state.over || state.turn!==0 || animating) return;
   if(handRevealTimer){ clearTimeout(handRevealTimer); handRevealTimer = null; }
@@ -1122,8 +1175,12 @@ function humanDraw(){
   sfxDraw();
   animateDrawThenRun(0, 1, ()=>{
     animating = false;
-    log('あなたが山札から1枚引いた');
-    state.turn = nextIndex(0,1);
+    if(drawnCardPlayable(0)){
+      log('あなたが山札から1枚引いた(出せるカードだった!そのまま出せるよ)');
+    } else {
+      log('あなたが山札から1枚引いた');
+      state.turn = nextIndex(0,1);
+    }
     renderAll();
     continueGame();
   });
@@ -1137,7 +1194,10 @@ function humanPlay(idx, el){
   if(card.type==='wild'){
     pendingWildCardIdx = idx;
     pendingWildEl = el;
-    if(card.wildType==='swap'){ openTargetModal(); } else { openColorModal(); }
+    if(card.wildType==='swap'){
+      if(human.hand.length===1){ pendingSwapTarget = null; openColorModal(); } // 最後の1枚:交換せずにあがれる
+      else { openTargetModal(); }
+    } else { openColorModal(); }
     return;
   }
   human.hand.splice(idx,1); state.discard.push(card);
@@ -1220,7 +1280,7 @@ function continueGame(){
     if(state.pendingDraw > 0 && !hasPlayable){
       const drawN = state.pendingDraw;
       const resetPending = ()=>{ state.pendingDraw = 0; state.pendingPlusN = 0; };
-      setTimeout(()=>{
+      gTimeout(()=>{
         sfxAttack();
         animateDrawThenRun(0, drawN, ()=>{
           log(`あなたが${drawN}枚引いた`);
@@ -1234,11 +1294,15 @@ function continueGame(){
       return;
     }
     if(!hasPlayable){
-      setTimeout(()=>{
+      gTimeout(()=>{
         sfxDraw();
         animateDrawThenRun(0, 1, ()=>{
-          log('あなたが山札を1枚引いた(出せるカードがなかった)');
-          state.turn = nextIndex(0,1);
+          if(drawnCardPlayable(0)){
+            log('あなたが山札を1枚引いた(出せるカードだった!そのまま出せるよ)');
+          } else {
+            log('あなたが山札を1枚引いた(出せるカードがなかった)');
+            state.turn = nextIndex(0,1);
+          }
           renderAll();
           continueGame();
         });
@@ -1246,7 +1310,7 @@ function continueGame(){
     } else { beginHumanTurn(); }
     return;
   }
-  setTimeout(()=> aiTurn(state.turn), speedMs(800));
+  gTimeout(()=> aiTurn(state.turn), speedMs(800));
 }
 
 function aiChooseCard(p){
@@ -1299,8 +1363,12 @@ function aiTurn(idx){
     }
     sfxDraw();
     animateDrawThenRun(idx, 1, ()=>{
-      log(`${p.name}が山札を1枚引いた`);
-      state.turn = nextIndex(idx,1);
+      if(drawnCardPlayable(idx)){
+        log(`${p.name}が山札を1枚引いた(そのまま出せるカードだった)`);
+      } else {
+        log(`${p.name}が山札を1枚引いた`);
+        state.turn = nextIndex(idx,1);
+      }
       renderAll(); continueGame();
     });
     return;
@@ -1312,7 +1380,9 @@ function aiTurn(idx){
   let chosenColor, chosenTarget;
   if(card.type==='wild'){
     chosenColor = aiPickColor(p);
-    if(card.wildType==='swap'){
+    if(card.wildType==='swap' && p.hand.length===0){
+      chosenTarget = null; // 最後の1枚:交換せずそのままあがる
+    } else if(card.wildType==='swap'){
       const others = [0,1,2,3].filter(i=>i!==idx && !state.finished.includes(i));
       if(others.length===0){
         // 他にプレイヤーがいない場合、swapできないので山札から引くフォールバック
@@ -1366,7 +1436,7 @@ window.addEventListener('error', (e)=>{
   <h3 style="color:#E0453C;font-size:17px;margin-top:0;">あそびかた</h3>
   <ul style="padding-left:20px;margin:8px 0;">
     <li>前の人が出したカードと、同じ「行(あいうえお)」または「段(あかさたな)」のカードを出そう</li>
-    <li>出せるカードがない時は、山札から1枚引く</li>
+    <li>出せるカードがない時は、山札から1枚引く(引いたカードが出せるなら、そのまま出せる)</li>
     <li>手札が残り1枚になったら「さいご!」ボタンを押そう(押し忘れると山札から2枚引くことになるよ)</li>
     <li>手札が0枚になったら勝ち!</li>
     <li>「+1」「+2」「+3」のペンキカードや、色変え・手札交換などの特殊カードも登場し、対戦がさらに盛り上がります</li>
