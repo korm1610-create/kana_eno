@@ -463,12 +463,16 @@ const CHAR_ROW = {};
   };
   Object.keys(ROWS).forEach(row => ROWS[row].forEach(ch => { CHAR_ROW[ch] = row; }));
 })();
+// 各色に1枚ずつ入るカード
 const ACTIONS = [
   {key:'skip', n:0},
   {key:'reverse', n:0},
-  {key:'plus1', n:1},
-  {key:'plus2', n:2},
-  {key:'plus3', n:3},
+];
+// 攻撃カード(ペンキ)は枚数を絞る:ゲームの終わりが見えるように +1×5, +2×2, +3×1 の計8枚
+const ATTACK_CARDS = [
+  {key:'plus1', n:1, colors:['green','blue','red','purple','yellow']},
+  {key:'plus2', n:2, colors:['blue','red']},
+  {key:'plus3', n:3, colors:['yellow']},
 ];
 const WILDS = [ {key:'colorChange', n:0}, {key:'swap', n:0} ];
 
@@ -510,6 +514,9 @@ function buildDeck(){
   COLORS.forEach(color=>{
     LETTERS[color].forEach(ch=>{ deck.push({id:nid(), type:'letter', color, char:ch}); });
     ACTIONS.forEach(a=>{ deck.push({id:nid(), type:'action', color, action:a.key, n:a.n}); });
+  });
+  ATTACK_CARDS.forEach(a=>{
+    a.colors.forEach(color=>{ deck.push({id:nid(), type:'action', color, action:a.key, n:a.n}); });
   });
   WILDS.forEach(w=>{
     deck.push({id:nid(), type:'wild', wildType:w.key, n:w.n});
@@ -589,7 +596,7 @@ function startGame(){
     {id:3, name:'ねこ', isHuman:false, avatar:'🐱', hand:[]},
   ];
   const deck = buildDeck();
-  for(let r=0;r<5;r++){ players.forEach(p=> p.hand.push(deck.pop())); }
+  for(let r=0;r<4;r++){ players.forEach(p=> p.hand.push(deck.pop())); }
   let starter;
   do{ starter = deck.pop(); }while(!starter || starter.type!=='letter');
 
